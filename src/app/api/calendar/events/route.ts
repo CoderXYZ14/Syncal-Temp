@@ -89,11 +89,11 @@ export async function POST(request: NextRequest) {
       description: description || undefined,
       start: {
         dateTime: startDateTime,
-        timeZone: "UTC",
+        timeZone: "Asia/Kolkata",
       },
       end: {
         dateTime: endDateTime,
-        timeZone: "UTC",
+        timeZone: "Asia/Kolkata",
       },
       location: location || undefined,
     });
