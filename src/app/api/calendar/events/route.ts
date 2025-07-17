@@ -65,6 +65,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { title, description, startTime, endTime, location } = body;
 
+    // Validate required fields
+    if (!title || !startTime || !endTime) {
+      return NextResponse.json(
+        { error: "Title, start time, and end time are required" },
+        { status: 400 }
+      );
+    }
+
+    // Convert datetime-local format to ISO string with timezone
+    const startDateTime = new Date(startTime).toISOString();
+    const endDateTime = new Date(endTime).toISOString();
+
     await dbConnect();
     const user = await UserModel.findOne({ email: session.user.email });
     if (!user?.accessToken) {
@@ -74,10 +86,16 @@ export async function POST(request: NextRequest) {
     const calendarService = new GoogleCalendarService(user.accessToken);
     const event = await calendarService.createEvent({
       summary: title,
-      description,
-      start: { dateTime: startTime },
-      end: { dateTime: endTime },
-      location,
+      description: description || undefined,
+      start: {
+        dateTime: startDateTime,
+        timeZone: "UTC",
+      },
+      end: {
+        dateTime: endDateTime,
+        timeZone: "UTC",
+      },
+      location: location || undefined,
     });
 
     // Save to database

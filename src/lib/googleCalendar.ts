@@ -29,8 +29,8 @@ export class GoogleCalendarService {
   async createEvent(event: {
     summary: string;
     description?: string;
-    start: { dateTime: string };
-    end: { dateTime: string };
+    start: { dateTime: string; timeZone?: string };
+    end: { dateTime: string; timeZone?: string };
     location?: string;
   }) {
     try {
