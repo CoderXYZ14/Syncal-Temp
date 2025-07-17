@@ -66,6 +66,7 @@ export default function Home() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [deletedEvents, setDeletedEvents] = useState<string[]>([]);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [newEvent, setNewEvent] = useState({
@@ -95,17 +96,23 @@ export default function Home() {
 
   const setupWebhook = async () => {
     try {
+      console.log("Attempting to setup webhook...");
       const response = await fetch("/api/calendar/webhook/setup", {
         method: "POST",
       });
 
       if (response.ok) {
-        console.log("Webhook setup successfully");
+        const data = await response.json();
+        console.log("Webhook setup successfully:", data);
+        toast.success("Webhook setup successfully");
       } else {
-        console.log("Failed to setup webhook");
+        const errorData = await response.json();
+        console.log("Failed to setup webhook:", errorData);
+        toast.error("Failed to setup webhook - check credentials");
       }
     } catch (error) {
       console.error("Error setting up webhook:", error);
+      toast.error("Error setting up webhook");
     }
   };
 
@@ -117,7 +124,14 @@ export default function Home() {
       const response = await fetch("/api/calendar/events");
       if (response.ok) {
         const data = await response.json();
-        setEvents(data.events || []);
+        // Filter out deleted events that might reappear due to API delays
+        const filteredEvents = (data.events || []).filter(
+          (event: CalendarEvent) => !deletedEvents.includes(event.id)
+        );
+        setEvents(filteredEvents);
+        console.log(
+          `Loaded ${filteredEvents.length} events (${deletedEvents.length} filtered out)`
+        );
       } else {
         toast.error("Failed to fetch events");
       }
@@ -126,6 +140,36 @@ export default function Home() {
       toast.error("Error fetching events");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      console.log("Deleting event with ID:", eventId);
+
+      // Immediately remove from UI for better UX
+      setEvents((prevEvents) =>
+        prevEvents.filter((event) => event.id !== eventId)
+      );
+
+      const response = await fetch(`/api/calendar/events?eventId=${eventId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast.success("Event deleted successfully");
+
+        setDeletedEvents((prev) => [...prev, eventId]);
+        console.log("Event deleted and added to deleted list:", eventId);
+      } else {
+        await fetchEvents();
+        toast.error("Failed to delete event");
+      }
+    } catch (error) {
+      console.error("Error deleting event:", error);
+
+      await fetchEvents();
+      toast.error("Error deleting event");
     }
   };
 
@@ -163,16 +207,27 @@ export default function Home() {
   };
 
   useEffect(() => {
+    // Only sync once when user first signs in, not on every session change
     async function fetchAll() {
-      if (session) {
+      if (session && status === "authenticated") {
+        console.log("Initial sync for authenticated user");
         await fetchEvents();
         setupWebhook();
       }
     }
     fetchAll();
-  }, [session]);
+  }, [status]);
 
-  // Animated Background Components
+  useEffect(() => {
+    if (session && status === "authenticated") {
+      const interval = setInterval(() => {
+        fetchEvents();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [session, status]);
+
   const MovingOrb = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <motion.div
@@ -753,6 +808,31 @@ export default function Home() {
                                   </div>
                                 )}
                               </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteEvent(event.id)}
+                                className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                                title="Delete Event"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="h-4 w-4"
+                                >
+                                  <path d="M18 6L6 18" />
+                                  <path d="M6 6L18 18" />
+                                </svg>
+                              </Button>
                             </div>
                           </div>
                         </CardContent>

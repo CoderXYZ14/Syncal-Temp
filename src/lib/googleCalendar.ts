@@ -11,6 +11,7 @@ export class GoogleCalendarService {
 
   async getEvents() {
     try {
+      console.log("Fetching events from Google Calendar API");
       const response = await this.calendar.events.list({
         calendarId: "primary",
         timeMin: new Date().toISOString(),
@@ -19,7 +20,9 @@ export class GoogleCalendarService {
         orderBy: "startTime",
       });
 
-      return response.data.items || [];
+      const events = response.data.items || [];
+      console.log(`Google Calendar API returned ${events.length} events`);
+      return events;
     } catch (error) {
       console.error("Error fetching calendar events:", error);
       throw error;
@@ -34,11 +37,13 @@ export class GoogleCalendarService {
     location?: string;
   }) {
     try {
+      console.log("Creating event in Google Calendar API");
       const response = await this.calendar.events.insert({
         calendarId: "primary",
         requestBody: event,
       });
 
+      console.log(`Event created with ID: ${response.data.id}`);
       return response.data;
     } catch (error) {
       console.error("Error creating calendar event:", error);
@@ -57,12 +62,14 @@ export class GoogleCalendarService {
     }
   ) {
     try {
+      console.log(`Updating event ${eventId} in Google Calendar API`);
       const response = await this.calendar.events.update({
         calendarId: "primary",
         eventId,
         requestBody: event,
       });
 
+      console.log(`Event updated: ${eventId}`);
       return response.data;
     } catch (error) {
       console.error("Error updating calendar event:", error);
@@ -72,10 +79,12 @@ export class GoogleCalendarService {
 
   async deleteEvent(eventId: string) {
     try {
+      console.log(`Deleting event ${eventId} from Google Calendar API`);
       await this.calendar.events.delete({
         calendarId: "primary",
         eventId,
       });
+      console.log(`Event deleted: ${eventId}`);
     } catch (error) {
       console.error("Error deleting calendar event:", error);
       throw error;
@@ -88,22 +97,28 @@ export class GoogleCalendarService {
         .toString(36)
         .substr(2, 9)}`;
 
+      console.log(`Setting up webhook with channel ID: ${channelId}`);
+      console.log(`Webhook URL: ${webhookUrl}`);
+
       const response = await this.calendar.events.watch({
         calendarId: "primary",
         requestBody: {
           id: channelId,
           type: "web_hook",
           address: webhookUrl,
-          // Optional: Set expiration (max 1 week for calendar API)
+          // Set expiration (max 1 week for calendar API)
           expiration: (Date.now() + 7 * 24 * 60 * 60 * 1000).toString(),
         },
       });
 
-      return {
+      const result = {
         channelId: response.data.id,
         resourceId: response.data.resourceId,
         expiration: response.data.expiration,
       };
+
+      console.log("Webhook setup successful:", result);
+      return result;
     } catch (error) {
       console.error("Error setting up webhook:", error);
       throw error;
@@ -112,12 +127,18 @@ export class GoogleCalendarService {
 
   async stopWebhook(channelId: string, resourceId: string) {
     try {
+      console.log(
+        `Stopping webhook - Channel: ${channelId}, Resource: ${resourceId}`
+      );
+
       await this.calendar.channels.stop({
         requestBody: {
           id: channelId,
           resourceId: resourceId,
         },
       });
+
+      console.log(`Webhook stopped successfully`);
     } catch (error) {
       console.error("Error stopping webhook:", error);
       throw error;
