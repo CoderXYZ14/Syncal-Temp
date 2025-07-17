@@ -163,10 +163,13 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (session) {
-      fetchEvents();
-      setupWebhook();
+    async function fetchAll() {
+      if (session) {
+        await fetchEvents();
+        setupWebhook();
+      }
     }
+    fetchAll();
   }, [session]);
 
   // Animated Background Components
