@@ -9,19 +9,12 @@ import {
   RefreshCw,
   Plus,
   LogOut,
-  User,
-  Mail,
   Sparkles,
   ArrowRight,
   Clock,
   MapPin,
   Moon,
   Sun,
-  Menu,
-  X,
-  Zap,
-  CheckCircle,
-  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
